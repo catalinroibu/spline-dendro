@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spline-ul: n și f</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* layout: one narrow column; controls row, then the chart; safranin red = curve, astra blue = indices (the double stain of wood anatomy) */
+:root{--bg:#F9F9F8;--panel:#FFFFFF;--ink:#231F1C;--muted:#6B625B;--line:#DDD7D0;--red:#B4314F;--blue:#2C5AA0;--focus:#2C5AA0;
+--f-display:"IBM Plex Serif",Cambria,Georgia,serif;--f-body:"IBM Plex Sans",Calibri,"Segoe UI",system-ui,sans-serif;--f-mono:"IBM Plex Mono",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1A1817;--panel:#22201E;--ink:#ECE7E1;--muted:#ABA39B;--line:#3E3935;--red:#E07A91;--blue:#86A9E3;--focus:#86A9E3;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1A1817;--panel:#22201E;--ink:#ECE7E1;--muted:#ABA39B;--line:#3E3935;--red:#E07A91;--blue:#86A9E3;--focus:#86A9E3;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--f-display);font-weight:500;font-size:clamp(26px,4vw,34px);line-height:1.15;margin:0;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lead{margin:0;max-width:65ch;color:var(--ink)}
+.controls{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center}
+.group{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.group .lbl{font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-variant-numeric:tabular-nums;border:0;background:transparent;color:var(--ink);padding:6px 14px;cursor:pointer;min-width:52px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--red);color:var(--panel);font-weight:600}
+.seg button:focus-visible,#hd:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.fval{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--red)}
+.hint{font-size:14px;color:var(--muted)}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 6px}
+.chart svg{display:block;width:100%;height:auto;touch-action:none;user-select:none}
+.chart text{font-family:var(--f-body)}
+.notes{font-size:14px;color:var(--muted);max-width:65ch;margin:0;display:flex;flex-direction:column;gap:6px}
+.notes p{margin:0}
+@media (prefers-reduced-motion:no-preference){.seg button{transition:background .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Seminarul 7 · Standardizarea seriilor</p>
+    <h1>Spline-ul: n și f</h1>
+  </header>
+  <p class="lead">Măsurătorile (negru) rămân aceleași. Alegeți n, rigiditatea spline-ului, și f, cât copiază curba din variația de n ani. Curba roșie și indicii albaștri se recalculează imediat.</p>
+  <div class="controls">
+    <div class="group"><span class="lbl">n</span><div class="seg" id="nseg" role="group" aria-label="n, în ani"></div><span class="hint">ani</span></div>
+    <div class="group"><span class="lbl">f</span><span class="fval" id="fval">0,5</span><span class="hint">trageți punctul roșu de pe axa verticală, sau folosiți săgețile sus/jos</span></div>
+  </div>
+  <div class="chart">
+    <svg id="sv" viewBox="0 0 680 850" role="img" aria-labelledby="svt svd">
+      <title id="svt">Spline pe valori anuale, cu n și f</title>
+      <desc id="svd">Sus: măsurători anuale fictive (negru) și curba spline-ului (roșu), cu n marcat pe curbă și f pe axa verticală. Dedesubt: indicii rezultați (albastru). Jos: același spline pe variații de 8, 32 și 128 de ani.</desc>
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+      <g id="g"></g>
+      <circle id="hd" cx="78" cy="119" r="9" fill="var(--red)" stroke="var(--panel)" stroke-width="2" tabindex="0" role="slider" aria-label="f" aria-valuemin="0.05" aria-valuemax="0.95" aria-valuenow="0.5" style="cursor:ns-resize"/>
+    </svg>
+  </div>
+  <div class="notes">
+    <p>Date fictive: o variație cu ciclul de 32 de ani plus variația de la an la an. Spline-ul cubic de netezire (Cook și Peters 1981), calculat ca în dplR (funcția caps); la o variație de n ani, curba copiază exact f din ea.</p>
+    <p>Indicii sunt măsurătoare ÷ curbă, pentru măsurători considerate lățimi de inel cu nivelul de 1 mm și variația de ±0,4 mm. Liniile punctate de la 1,4 și 0,6 arată toată variația de 32 de ani.</p>
+  </div>
+</div>
+<script>
+(function(){
+const DATA={"D":[0.1145,-0.0424,0.4133,0.5369,0.5604,0.2779,0.7621,0.7564,1.0250,0.8766,0.8341,0.6708,0.6584,0.5059,-0.1776,0.4914,0.1356,-0.1472,-0.5597,-0.4038,-0.7794,-0.8677,-1.2301,-0.6583,-0.9894,-0.5610,-0.5431,-0.8187,-0.5651,-0.1759,-0.4991,-0.1585,-0.0560,0.2683,0.4228,0.8118,0.8377,0.6353,1.0509,0.7993,0.7454,1.1519,0.6590,0.8989,0.5237,0.8676,0.5393,0.1065,0.1759,-0.1013,-0.6401,-0.6009,-0.9118,-0.7326,-1.0657,-1.0317,-1.2720,-1.1922,-0.8944,-1.0513,-0.7382,-0.5188,-0.4264,-0.2592,-0.3816,0.1351,-0.0133,0.8092,0.4864,0.8641,1.0382,0.9820,1.2963,0.7944,1.0214,0.6165,1.1745,0.7069,0.3071,0.3678,-0.2542,0.1369,-0.6369,-0.8981,-0.7193,-0.6446,-0.9263,-1.1481,-0.7413,-0.4496,-1.3548,-0.5073,-0.8116,-0.3397,-0.7840,-0.2524,-0.2109,0.0872,0.1457,0.6368,0.9747,0.7228,0.8738,0.7362,1.2191,1.1044,0.5797,1.1573,0.4499,0.3241,0.0589,-0.0675,-0.0766,-0.0779,-0.5391,-0.5993,-0.7690,-0.5739,-0.4204,-1.2159,-0.5806,-0.5118,-0.8730,-0.6341,-1.0896,-0.4524,-0.5024,-0.2315,0.1215],"R8":[0.2273,0.6969,1.5805,0.8367,-0.0445,-0.6100,-1.0221,-0.9477,0.1107,0.9159,1.0842,0.7889,0.0346,-0.5206,-1.2823,-0.4523,-0.2000,0.7808,1.1707,0.7593,-0.3432,-0.7018,-0.9264,-0.4894,0.1101,0.8340,1.2514,0.5515,-0.1361,-0.7089,-0.9254,-0.3979,-0.1904,0.5148,1.1704,0.6187,-0.0473,-0.5740,-1.1352,-0.8665,-0.0565,0.6209,0.8489,0.8998,-0.1058,-0.6921,-0.9699,-1.1160,0.0762,1.0375,0.9970,0.5366,0.2885,-0.6498,-0.7769,-0.6597,0.1349,1.0252,1.1448,0.7897,-0.1484,-0.5794,-1.0911,-0.2274,0.0754,0.5315,1.3610,0.6059,-0.3490,-0.9370,-0.9908,-0.8022,0.1009,0.6566,0.5915,0.6434,0.3888,-0.8045,-1.1296,-0.7336,0.3637,0.5154,1.1717,0.5721,-0.0721,-0.7853,-0.8282,-0.5732,0.2368,0.9415,1.4756,0.7226,-0.5577,-0.8262,-1.1707,-0.7722,0.2533,0.5820,0.8227,0.8155,0.1542,-0.7606,-0.9093,-0.5975,0.0809,0.5816,1.1625,0.2081,0.1351,-0.6183,-0.5487,-0.6492,0.0243,0.9702,1.1613,0.7061,-0.0047,-0.6766,-1.2354,-0.4352,-0.1188,0.6419,1.1514,0.6193,-0.0228,-0.3706,-1.1396,-0.7570,0.3302],"R32":[0.2273,0.1849,0.9632,0.6852,0.6626,0.9286,0.9018,0.7402,1.1107,1.1896,1.0081,0.9132,0.7417,0.7421,0.1003,0.4499,-0.2000,-0.1214,-0.2120,-0.5034,-1.0503,-0.8261,-0.8503,-0.7631,-0.8899,-0.8539,-0.6725,-0.9871,-0.8432,-0.5574,-0.3081,0.1141,-0.1904,0.0028,0.5530,0.4672,0.6598,0.9646,0.7887,0.8214,0.9435,0.8945,0.7728,1.0242,0.6013,0.5706,0.4128,-0.2138,0.0762,0.1353,-0.3857,-0.7261,-0.4187,-0.7742,-0.7008,-0.9334,-0.8651,-0.6627,-0.7791,-0.7489,-0.8555,-0.4279,-0.4738,0.2846,0.0754,0.0195,0.7437,0.4544,0.3581,0.6016,0.9330,0.8857,1.1009,0.9303,0.5153,0.7677,1.0959,0.4582,0.2531,0.1686,0.3637,-0.3868,-0.2109,-0.6906,-0.7792,-0.9096,-0.7521,-0.8469,-0.7632,-0.7464,-0.4483,-0.8160,-1.2649,-0.6747,-0.5534,-0.2602,0.2533,0.0699,0.2054,0.6639,0.8613,0.7780,1.0146,1.0904,1.0809,0.8553,1.0864,0.3324,0.8422,0.6444,0.8340,0.2530,0.0243,0.0680,-0.2214,-0.5566,-0.7118,-0.8010,-1.1593,-0.7089,-1.1188,-1.0460,-0.7725,-0.9193,-0.7299,-0.2191,-0.5223,-0.2450,0.3302],"R128":[0.2273,0.0389,0.6785,0.2763,0.1506,0.3401,0.2682,0.0963,0.4934,0.6364,0.5556,0.5958,0.5902,0.7822,0.3520,0.9264,0.5071,0.8146,0.9437,0.8554,0.4883,0.8631,0.9555,1.1217,1.0340,1.0685,1.2083,0.8144,0.8447,0.9873,1.0697,1.3080,0.8096,0.8065,1.1655,0.9008,0.9335,1.1032,0.8217,0.7822,0.8674,0.8177,0.7308,1.0504,0.7256,0.8182,0.8032,0.3320,0.7833,1.0019,0.6314,0.4251,0.8440,0.5714,0.6945,0.4750,0.5176,0.6550,0.4351,0.3255,0.0467,0.2744,0.0069,0.5288,0.0754,-0.2246,0.2630,-0.2479,-0.5441,-0.4729,-0.2811,-0.4319,-0.2818,-0.4780,-0.8799,-0.5778,-0.1668,-0.6931,-0.7639,-0.6981,-0.3434,-0.9326,-0.6013,-0.9383,-0.9035,-0.9359,-0.7101,-0.7701,-0.6871,-0.7071,-0.4814,-0.9545,-1.5385,-1.1083,-1.1659,-1.0639,-0.7467,-1.1240,-1.1725,-0.8808,-0.8266,-1.0235,-0.8662,-0.8319,-0.8430,-1.0295,-0.7194,-1.3568,-0.6964,-0.7144,-0.3217,-0.6830,-0.6828,-0.4085,-0.4731,-0.5967,-0.5602,-0.4836,-0.7068,-0.1556,-0.5014,-0.4021,-0.1389,-0.3308,-0.2179,0.1898,-0.2376,-0.0990,0.3302]};
+const NS=[16,32,64,128];let n=32,f=0.5;
+const D=DATA.D,ROWS=[[8,DATA.R8],[32,DATA.R32],[128,DATA.R128]];
+const kf=w=>6*Math.pow(Math.cos(w)-1,2)/(Math.cos(w)+2);
+const pOf=(nn,ff)=>(ff/(1-ff))*kf(2*Math.PI/nn);
+const resp=(l,nn,ff)=>1/(1+kf(2*Math.PI/l)/pOf(nn,ff));
+function spline(y,nn,ff){const m=y.length-2,a=1/(2*pOf(nn,ff));const B=[];for(let i=0;i<m;i++)B.push(new Float64Array(5));
+ for(let i=0;i<m;i++){B[i][2]=2/3+6*a;if(i+1<m)B[i][3]=1/6-4*a;if(i+2<m)B[i][4]=a;if(i>=1)B[i][1]=1/6-4*a;if(i>=2)B[i][0]=a;}
+ const r=new Float64Array(m);for(let i=0;i<m;i++)r[i]=y[i]-2*y[i+1]+y[i+2];
+ for(let i=0;i<m;i++){for(let k=1;k<=2&&i+k<m;k++){const q=B[i+k][2-k]/B[i][2];for(let j=0;j<=2&&i+j<m;j++)B[i+k][2-k+j]-=q*B[i][2+j];r[i+k]-=q*r[i];}}
+ const g=new Float64Array(m);for(let i=m-1;i>=0;i--){let s=r[i];for(let j=1;j<=2&&i+j<m;j++)s-=B[i][2+j]*g[i+j];g[i]=s/B[i][2];}
+ const o=Float64Array.from(y);for(let j=0;j<m;j++){o[j]-=a*g[j];o[j+1]+=2*a*g[j];o[j+2]-=a*g[j];}return o;}
+const ani=x=>{const r=x%100;return (x<20||(r>=1&&r<20))?x+' ani':x+' de ani';};
+const cm=v=>(Math.round(v*100)/100).toString().replace('.',',');
+const pc=v=>Math.round(v*100)+'%';
+const NSV='http://www.w3.org/2000/svg';
+function el(t,a,x){const e=document.createElementNS(NSV,t);for(const k in a)e.setAttribute(k,a[k]);if(x!==undefined)e.textContent=x;return e;}
+const T=(x,y,s,o={})=>el('text',Object.assign({x:x,y:y,fill:o.fill||'var(--muted)','font-size':o.size||12,'font-weight':o.w||400,'text-anchor':o.anchor||'start'},o.extra||{}),s);
+const MID=155,AMP=62,AX=78,YTOP=MID-AMP,X0=90,X1=510,tx=t=>X0+t/128*(X1-X0);
+const sv=document.getElementById('sv'),hd=document.getElementById('hd'),seg=document.getElementById('nseg');
+NS.forEach(v=>{const b=document.createElement('button');b.type='button';b.id='n'+v;b.textContent=v;b.setAttribute('aria-pressed',v===n?'true':'false');b.addEventListener('click',()=>{n=v;draw();});seg.appendChild(b);});
+const line=(arr,fx,fy)=>{let d='';arr.forEach((v,i)=>{d+=(i?'L':'M')+fx(i).toFixed(1)+' '+fy(v).toFixed(1);});return d;};
+function draw(){
+ NS.forEach(v=>document.getElementById('n'+v).setAttribute('aria-pressed',v===n?'true':'false'));
+ document.getElementById('fval').textContent=cm(f);
+ hd.setAttribute('aria-valuenow',f);hd.setAttribute('aria-valuetext','f = '+cm(f));
+ const u32=resp(32,n,f),yv=v=>MID-AMP*Math.max(-1.75,Math.min(1.75,v));
+ const g=document.getElementById('g');while(g.firstChild)g.removeChild(g.firstChild);
+ g.appendChild(T(X0,22,'Măsurătorile (negru, an cu an, fixe) și spline-ul (roșu)',{fill:'var(--ink)',size:14,w:600}));
+ g.appendChild(el('line',{x1:X0,x2:X1,y1:MID,y2:MID,stroke:'var(--line)','stroke-width':1}));
+ g.appendChild(el('line',{x1:AX,x2:AX,y1:MID+4,y2:YTOP-4,stroke:'var(--muted)','stroke-width':1.6}));
+ [0,0.25,0.5,0.75,1].forEach(v=>{const y=MID-AMP*v;g.appendChild(el('line',{x1:AX-5,x2:AX,y1:y,y2:y,stroke:'var(--muted)','stroke-width':1}));
+  if(Math.abs(v-f)>0.12)g.appendChild(T(AX-14,y+4,cm(v),{anchor:'end'}));});
+ g.appendChild(T(AX-14,MID-AMP*f+5,'f = '+cm(f),{anchor:'end',fill:'var(--red)',size:14,w:600}));
+ g.appendChild(el('line',{x1:AX+10,x2:X1,y1:YTOP,y2:YTOP,stroke:'var(--muted)','stroke-width':0.8,'stroke-dasharray':'3 3'}));
+ g.appendChild(el('line',{x1:AX+10,x2:548,y1:MID-AMP*u32,y2:MID-AMP*u32,stroke:'var(--red)','stroke-width':1.2,'stroke-dasharray':'4 3'}));
+ g.appendChild(el('path',{d:line(D,tx,yv),fill:'none',stroke:'var(--ink)','stroke-width':1.1}));
+ const G=spline(D,n,f);
+ g.appendChild(el('path',{d:line(Array.from(G),tx,yv),fill:'none',stroke:'var(--red)','stroke-width':3}));
+ const ta=(8+n<=128)?8:0,tb=ta+n,ya=58;
+ g.appendChild(el('line',{x1:tx(ta),x2:tx(ta),y1:ya,y2:yv(G[ta])-4,stroke:'var(--red)','stroke-width':0.9,'stroke-dasharray':'3 3'}));
+ g.appendChild(el('line',{x1:tx(tb),x2:tx(tb),y1:ya,y2:yv(G[tb])-4,stroke:'var(--red)','stroke-width':0.9,'stroke-dasharray':'3 3'}));
+ g.appendChild(el('line',{x1:tx(ta)+3,x2:tx(tb)-3,y1:ya,y2:ya,stroke:'var(--red)','stroke-width':1.6,'marker-end':'url(#arrow)','marker-start':'url(#arrow)'}));
+ g.appendChild(T(Math.max((tx(ta)+tx(tb))/2,175),ya-10,'spline: n = '+ani(n),{anchor:'middle',fill:'var(--red)',size:14,w:600}));
+ const rx=562,ct=MID-AMP*u32;
+ g.appendChild(T(540,72,'la vârfuri:'));
+ g.appendChild(el('line',{x1:rx-12,x2:rx-12,y1:MID,y2:YTOP+2,stroke:'var(--ink)','stroke-width':1.6,'marker-end':'url(#arrow)'}));
+ if(u32>0.06)g.appendChild(el('line',{x1:rx+4,x2:rx+4,y1:MID,y2:ct+2,stroke:'var(--red)','stroke-width':2.6,'marker-end':'url(#arrow)'}));
+ if(u32<0.94)g.appendChild(el('line',{x1:rx+4,x2:rx+4,y1:ct-2,y2:YTOP+2,stroke:'var(--blue)','stroke-width':2.6,'marker-end':'url(#arrow)'}));
+ g.appendChild(el('line',{x1:rx-18,x2:rx+12,y1:MID,y2:MID,stroke:'var(--muted)','stroke-width':0.8}));
+ const yb=Math.max((ct+YTOP)/2+4,YTOP+20),yr=Math.max((MID+ct)/2+4,yb+15);
+ g.appendChild(T(rx+16,YTOP-2,'variația = 1',{fill:'var(--ink)',size:13,w:600}));
+ g.appendChild(T(rx+16,yb,'indici: '+pc(1-u32),{fill:'var(--blue)',size:13,w:600}));
+ g.appendChild(T(rx+16,Math.min(yr,MID+8),'curba: '+pc(u32),{fill:'var(--red)',size:13,w:600}));
+ const IC=330,IS=62,yI=v=>IC-Math.max(-1.6,Math.min(1.6,(v-1)/0.4))*IS;
+ g.appendChild(T(X0,257,'Indicii rezultați: măsurătoare ÷ curbă (albastru)',{fill:'var(--ink)',size:14,w:600}));
+ g.appendChild(el('line',{x1:X0,x2:X1,y1:yI(1),y2:yI(1),stroke:'var(--muted)','stroke-width':0.8}));
+ [1.4,0.6].forEach(v=>g.appendChild(el('line',{x1:X0,x2:X1,y1:yI(v),y2:yI(v),stroke:'var(--muted)','stroke-width':0.6,'stroke-dasharray':'3 3'})));
+ [[1.4,'1,4'],[1,'1'],[0.6,'0,6']].forEach(([v,l])=>g.appendChild(T(AX-6,yI(v)+4,l,{anchor:'end'})));
+ const IX=D.map((d,i)=>(1+0.4*d)/(1+0.4*G[i]));
+ g.appendChild(el('path',{d:line(IX,tx,yI),fill:'none',stroke:'var(--blue)','stroke-width':1.6}));
+ g.appendChild(T(540,yI(1.4)+4,'± toată variația'));
+ g.appendChild(T(540,yI(1.4)+20,'de 32 de ani'));
+ g.appendChild(T(540,yI(0.6)+4,'rămân: '+pc(1-u32),{fill:'var(--blue)',size:13,w:600}));
+ for(let t=0;t<=128;t+=16){g.appendChild(el('line',{x1:tx(t),x2:tx(t),y1:415,y2:420,stroke:'var(--muted)','stroke-width':0.6}));g.appendChild(T(tx(t),435,String(t),{anchor:'middle'}));}
+ g.appendChild(T(X1+20,435,'anul'));
+ const B0=90,B1=630,bxx=t=>B0+t/128*(B1-B0);
+ g.appendChild(T(B0,482,'Același spline, pe variații de alte lungimi (tot valori anuale)',{fill:'var(--ink)',size:14,w:600}));
+ ROWS.forEach(([L,Dd],i)=>{const y0=562+i*112,a=30,u=resp(L,n,f),Gd=spline(Dd,n,f),yy=v=>y0-a*Math.max(-1.75,Math.min(1.75,v));
+  g.appendChild(T(B0,y0-a-14,'variația de '+ani(L)+': curba ia '+pc(u)+', rămân în indici '+pc(1-u),{fill:'var(--ink)',size:13,w:500}));
+  g.appendChild(el('line',{x1:B0,x2:B1,y1:y0,y2:y0,stroke:'var(--line)','stroke-width':0.8}));
+  g.appendChild(el('path',{d:line(Dd,bxx,yy),fill:'none',stroke:'var(--muted)','stroke-width':1.1}));
+  g.appendChild(el('path',{d:line(Array.from(Gd),bxx,yy),fill:'none',stroke:'var(--red)','stroke-width':3}));});
+ hd.setAttribute('cy',(MID-AMP*f).toFixed(1));
+}
+let drag=false;
+function toSvg(ev){const r=sv.getBoundingClientRect();const s=680/r.width;return {x:(ev.clientX-r.left)*s,y:(ev.clientY-r.top)*s};}
+function setV(v){v=Math.round(v*20)/20;f=Math.min(0.95,Math.max(0.05,v));draw();}
+function setF(ev){const p=toSvg(ev);setV((MID-p.y)/AMP);}
+sv.addEventListener('pointerdown',e=>{const p=toSvg(e);if(p.x<AX+30&&p.y>YTOP-20&&p.y<MID+20){drag=true;setF(e);e.preventDefault();}});
+window.addEventListener('pointermove',e=>{if(drag){setF(e);e.preventDefault();}});
+window.addEventListener('pointerup',()=>{drag=false;});
+window.addEventListener('pointercancel',()=>{drag=false;});
+hd.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowRight'){setV(f+0.05);e.preventDefault();}if(e.key==='ArrowDown'||e.key==='ArrowLeft'){setV(f-0.05);e.preventDefault();}});
+draw();
+})();
+</script>
+
+</body>
+</html>
